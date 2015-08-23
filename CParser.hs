@@ -1,31 +1,44 @@
 module CParser where
 import Ast
+import Lexical
 import Text.ParserCombinators.Parsec
+import Data.List
+import Control.Applicative hiding (many, (<|>) )
 
-junk :: Parser ()
-junk = skipMany space
-
-word :: Parser String
-word = many1 letter
-
-keywords = ["int", "struct"]
-
-valDecP :: Parser ValDec
-valDecP = do
-    tp <- junk >> word
-    nm <- junk >> word
-    junk >> char ';'
+valDec :: Parser Statement
+valDec = do
+    tp <- identifier
+    nm <- identifier
+    semicolon
     return $ ValDec tp nm
 
+expr :: Parser Expr
+expr = try strConst <|> try intConst <|> try boolConst <|> funCall
+
+funCall :: Parser Expr
+funCall = FunCall <$> identifier <*> (brackets1 (sepBy (try expr) coma))
+
+assignment :: Parser Statement
+assignment = do
+    varname <- identifier
+    junk >> char '='
+    rest <- expr
+    semicolon
+    return $ Assignment varname rest
+
+statement :: Parser Statement
+statement = try valDec <|> assignment 
+
+params :: Parser [Parameter]
+params = sepBy (Parameter <$> identifier <*> identifier) coma
+
+functionDecl = FunctionDecl <$> identifier <*> identifier <*> (brackets1 params)
+function = Function <$> functionDecl <*> brackets2 (many $ try statement)
+
 cParser :: Parser CProg
-cParser = do
-    junk >> string "int"
-    junk >> string "main"
-    junk >> char '('
-    junk >> char ')'
-    junk >> char '{'
-    x <- many valDecP
-    junk >> char '}'
-    return $ ValDecL x
+cParser = do 
+    x <- Functions <$> (many1 $ try function)
+    junk >> eof
+    return x
     
 runCparser = parse cParser "C parser"
