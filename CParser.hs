@@ -10,7 +10,6 @@ word = many1 letter
 
 keywords = ["int", "struct"]
 
-
 valDecP :: Parser ValDec
 valDecP = do
     tp <- junk >> word
