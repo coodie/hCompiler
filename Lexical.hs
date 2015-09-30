@@ -5,10 +5,10 @@ import Data.List
 import Control.Applicative hiding (many, (<|>))
 
 junk :: Parser ()
-junk = skipMany space <?> "junk failed"
+junk = spaces <?> "junk"
 
 word :: Parser String
-word = many1 letter <?> "expecting word"
+word = many1 letter
 
 identifier :: Parser String
 identifier = junk >> word 
@@ -32,6 +32,7 @@ semicolon = junk >> char ';' >> return ()
 
 coma :: Parser ()
 coma = junk >> char ',' >> return ()
+
 strConst :: Parser Expr
 strConst = junk >> do 
     char '\"'
@@ -46,3 +47,9 @@ boolConst :: Parser Expr
 boolConst = junk >> 
     ((string "true" >> return (BoolConst True)) <|>
     (string "false" >> return (BoolConst False) ))
+
+equalOperator :: Parser String
+equalOperator = junk >> string "=="
+
+notEqualOperator :: Parser String
+notEqualOperator = junk >> string "!="
