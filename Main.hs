@@ -1,6 +1,7 @@
 module Main where
 import System.IO
 import Ast
+import Assembly
 import CParser
 import Text.Show.Pretty
 

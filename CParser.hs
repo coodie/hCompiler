@@ -18,7 +18,7 @@ expr = term1 `chainl1` plus
                 brackets1 expr
     mul = junk >> char '*' >> return Mul
     plus = junk >> char '+' >> return Add
-    boolOp =  (try equalOperator >> return Equal) <|>
+    boolOp = (try equalOperator >> return Equal) <|>
                     (notEqualOperator >> return NotEqual)
 
 varName :: Parser Expr
@@ -26,7 +26,7 @@ varName = VarName <$> identifier
 
 funCall :: Parser Expr
 funCall = 
-    FunCall <$> identifier <*> (brackets1 (sepBy (try expr) coma))
+    FunCall <$> identifier <*> brackets1 (sepBy (try expr) coma)
 
 valDec :: Parser Statement
 valDec = do
@@ -47,7 +47,7 @@ assignment = do
 bodyStatement = try manyStatements <|> oneStatement
     where
     manyStatements = brackets2 $ many (try statement)
-    oneStatement = (\x -> [x]) <$> statement
+    oneStatement = (: []) <$> statement
 
 conditional :: Parser Statement
 conditional = do
@@ -62,8 +62,7 @@ conditional = do
     where
     elseParser = do
         string "else"
-        elseStatements <- bodyStatement
-        return elseStatements
+        bodyStatement
 
 whileLoop :: Parser Statement
 whileLoop = do
@@ -84,7 +83,7 @@ statement = try conditional <|> try whileLoop <|> try assignment <|> try valDec 
 params :: Parser [Parameter]
 params = sepBy (Parameter <$> identifier <*> identifier) coma
 
-functionDecl = FunctionDecl <$> identifier <*> identifier <*> (brackets1 params)
+functionDecl = FunctionDecl <$> identifier <*> identifier <*> brackets1 params
 function = Function <$> functionDecl <*> brackets2 (many (try statement))
 
 cParser :: Parser CProg
