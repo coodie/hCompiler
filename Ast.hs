@@ -1,9 +1,7 @@
 module Ast where
 
 
-data CProg = 
-    Functions [Function]
-    deriving (Show)
+type ParseTree = [Function] 
 
 data FunctionDecl =
     FunctionDecl Type Name [Parameter]
@@ -19,7 +17,8 @@ data Statement =
     ConditionalIf Expr [Statement] |
     ConditionalIfElse Expr [Statement] [Statement] |
     WhileLoop Expr [Statement] |
-    StatExpr Expr
+    StatExpr Expr |
+    FunctionReturn Expr
     deriving (Show)
 
 data Expr = 

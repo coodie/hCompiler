@@ -4,10 +4,10 @@ import Lexical
 import Text.ParserCombinators.Parsec
 import Data.List
 import Control.Applicative hiding (many, (<|>))
-import Debug.Trace
+import Debug.Trace (trace)
 
 expr :: Parser Expr
-expr = term1 `chainl1` plus
+expr = term1 `chainl1` (plus <|> minus)
     where
     term1 = term2 `chainl1` mul
     term2 = factor `chainl1` boolOp
@@ -18,6 +18,7 @@ expr = term1 `chainl1` plus
                 brackets1 expr
     mul = junk >> char '*' >> return Mul
     plus = junk >> char '+' >> return Add
+    minus = junk >> char '-' >> return Sub
     boolOp = (try equalOperator >> return Equal) <|>
                     (notEqualOperator >> return NotEqual)
 
@@ -56,9 +57,9 @@ conditional = do
     ifStatements <- bodyStatement
     elseStatements <- junk >> option [] elseParser
     if null elseStatements then
-        return $ ConditionalIf ifExpr ifStatements
-    else
-        return $ ConditionalIfElse ifExpr ifStatements elseStatements
+            return $ ConditionalIf ifExpr ifStatements
+        else
+            return $ ConditionalIfElse ifExpr ifStatements elseStatements
     where
     elseParser = do
         string "else"
@@ -77,8 +78,20 @@ statExpr = do
     semicolon
     return $ StatExpr res
 
+functionReturn :: Parser Statement
+functionReturn = do
+    junk >> string "return"
+    res <- expr
+    semicolon
+    return $ FunctionReturn res
+
 statement :: Parser Statement
-statement = try conditional <|> try whileLoop <|> try assignment <|> try valDec <|> statExpr
+statement = try conditional 
+        <|> try whileLoop 
+        <|> try functionReturn 
+        <|> try statExpr
+        <|> try assignment 
+        <|> valDec 
 
 params :: Parser [Parameter]
 params = sepBy (Parameter <$> identifier <*> identifier) coma
@@ -86,9 +99,9 @@ params = sepBy (Parameter <$> identifier <*> identifier) coma
 functionDecl = FunctionDecl <$> identifier <*> identifier <*> brackets1 params
 function = Function <$> functionDecl <*> brackets2 (many (try statement))
 
-cParser :: Parser CProg
+cParser :: Parser ParseTree
 cParser = do 
-    x <- Functions <$> (many1 $ try function)
+    x <- (many1 $ try function)
     junk >> eof
     return x
     
