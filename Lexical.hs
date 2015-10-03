@@ -28,6 +28,9 @@ brackets2 p = do
     junk >> char '}'
     return res
 
+assign :: Parser Char
+assign = junk >> char '='
+
 semicolon :: Parser ()
 semicolon = junk >> char ';' >> return ()
 
@@ -54,3 +57,6 @@ equalOperator = junk >> string "=="
 
 notEqualOperator :: Parser String
 notEqualOperator = junk >> string "!="
+
+greaterOperator :: Parser Char
+greaterOperator = junk >> char '<'

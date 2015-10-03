@@ -68,24 +68,21 @@ functionLeave = do
 expression :: Expr -> State Asm ()
 expression (Add e1 e2) = do
     expression e1
-    asmPut "pushl %eax"
+    asmPut "movl %eax, %ecx"
     expression e2
-    asmPut "popl %ebx"
-    asmPut "add %ebx, %eax"
+    asmPut "add %ecx, %eax"
 
 expression (Sub e1 e2) = do
     expression e1
-    asmPut "pushl %eax"
+    asmPut "movl %eax, %edx"
     expression e2
-    asmPut "popl %ebx"
-    asmPut "sub %eax, %ebx"
-    asmPut "movl %ebx, %eax"
+    asmPut "sub %eax, %edx"
+    asmPut "movl %edx, %eax"
 
 expression (Mul e1 e2) = do
     expression e1
-    asmPut "pushl %eax"
+    asmPut "movl %eax, %ebx"
     expression e2
-    asmPut "popl %ebx"
     asmPut "imul %ebx, %eax"
 
 expression (IntConst e) = do
@@ -100,29 +97,31 @@ expression (Equal e1 e2) = do
     expression e1
     asmPut "movl %eax, %ebx"
     expression e2
-    asmPut "subl %ebx, %eax"
+    asmPut "cmp %eax, %ebx"
 
-expression (NotEqual e1 e2) = do
-    expression e1
-    asmPut "pushl %eax"
-    expression e2
-    asmPut "popl %ebx"
-    asmPut "subl %ebx, %eax"
+expression (NotEqual e1 e2) = expression (Equal e1 e2)
+expression (Greater e1 e2) = expression (Equal e1 e2)
+
 
 expression (FunCall e1 e2) = do
     evalArgs e2
     asmPut $ "call " ++ e1
-    popArgs $ length e2
+    asmPut $ "addl $" ++ (show (4 * length e2)) ++ ", %esp"
     where
     evalArgs [] = return ()
     evalArgs (x:xs) = do
         evalArgs xs
         expression x
         asmPut "pushl %eax"
-    popArgs 0 = return ()
-    popArgs n = asmPut "popl %ecx" >> popArgs (n-1)
 
 -- Statement
+getJumpInstr expr = 
+    case expr of
+        (Equal _ _) -> "jne "
+        (NotEqual _ _) -> "je "
+        (Greater _ _) -> "jg "
+        _ -> error "wrong expression type"
+
 statement :: Statement -> State Asm ()
 statement (ValDec typeName varName) = 
     case typeName of
@@ -130,6 +129,14 @@ statement (ValDec typeName varName) =
         "char" -> putNewVariable varName charSize
 
 statement (Assignment varName expr) = do
+    offset <- liftM show $ getVarStackOffset varName 
+    expression expr
+    asmPut $ "movl %eax, " ++ offset ++ "(%ebp)" 
+
+statement (ValDef typeName varName expr) = do
+    case typeName of
+        "int" -> putNewVariable varName intSize
+        "char" -> putNewVariable varName charSize
     offset <- liftM show $ getVarStackOffset varName 
     expression expr
     asmPut $ "movl %eax, " ++ offset ++ "(%ebp)" 
@@ -145,19 +152,20 @@ statement (WhileLoop expr whileBody) = do
     let enterLabel = "while" ++ labelNumber ++ "enter"
     let exitLabel = "while" ++ labelNumber ++ "exit"
     asmPut $ enterLabel ++ ":"
+    let jumpInstr = getJumpInstr expr
     expression expr
-    asmPut "cmp $0, %eax"
-    asmPut $ "jne " ++ exitLabel
+    asmPut $ jumpInstr ++ exitLabel
     mapM_ statement whileBody
     asmPut $ "jmp " ++ enterLabel
     asmPut $ exitLabel ++ ":"
+    
 
 statement (ConditionalIf ifExpr ifBody) = do
     labelNumber <- liftM show newLabelNumber
     let exitLabel = "ifExit" ++ labelNumber
+    let jumpInstr = getJumpInstr ifExpr
     expression ifExpr
-    asmPut "cmp $0, %eax"
-    asmPut $ "jne " ++ exitLabel
+    asmPut $ jumpInstr ++ exitLabel
     mapM_ statement ifBody
     asmPut $ exitLabel ++ ":"
 
@@ -166,18 +174,15 @@ statement (ConditionalIfElse ifExpr ifBody elseBody) = do
     let ifLabel = "if" ++ labelNumber
     let elseLabel = "else" ++ labelNumber
     let exitLabel = "ifElseExit" ++ labelNumber
+    let jumpInstr = getJumpInstr ifExpr
     expression ifExpr
-    asmPut "cmp $0, %eax"
-
-    asmPut $ "jne " ++ elseLabel
+    asmPut $ jumpInstr ++ elseLabel
     mapM_ statement ifBody
     asmPut $ "jmp " ++ exitLabel
 
     asmPut $ elseLabel ++ ":"
     mapM_ statement elseBody
     asmPut $ exitLabel ++ ":"
-
-
 
 -- Predefined functions
 putPredefinedFunctions :: State Asm ()

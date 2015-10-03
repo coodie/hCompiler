@@ -14,6 +14,7 @@ data Function =
 data Statement =
     ValDec Type Name | 
     Assignment Var Expr |
+    ValDef Type Name Expr |
     ConditionalIf Expr [Statement] |
     ConditionalIfElse Expr [Statement] [Statement] |
     WhileLoop Expr [Statement] |
@@ -32,6 +33,7 @@ data Expr =
     Mul Expr Expr |
     Equal Expr Expr |
     NotEqual Expr Expr | 
+    Greater Expr Expr |
     FunCall Name [Expr]
     deriving (Show)
 

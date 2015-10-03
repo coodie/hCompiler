@@ -19,8 +19,9 @@ expr = term1 `chainl1` (plus <|> minus)
     mul = junk >> char '*' >> return Mul
     plus = junk >> char '+' >> return Add
     minus = junk >> char '-' >> return Sub
-    boolOp = (try equalOperator >> return Equal) <|>
-                    (notEqualOperator >> return NotEqual)
+    boolOp =        (try equalOperator >> return Equal) 
+              <|>   (try notEqualOperator >> return NotEqual)
+              <|>   (greaterOperator >> return Greater)
 
 varName :: Parser Expr
 varName = VarName <$> identifier
@@ -36,14 +37,23 @@ valDec = do
     semicolon
     return $ ValDec tp nm
 
+valDef :: Parser Statement
+valDef = do
+    tp <- identifier
+    nm <- identifier
+    assign
+    rest <- expr
+    semicolon
+    return $ ValDef tp nm rest
+
+
 assignment :: Parser Statement
 assignment = do
     varname <- identifier
-    junk >> char '='
+    assign
     rest <- expr
     semicolon
     return $ Assignment varname rest
-
 
 bodyStatement = try manyStatements <|> oneStatement
     where
@@ -90,6 +100,7 @@ statement = try conditional
         <|> try whileLoop 
         <|> try functionReturn 
         <|> try statExpr
+        <|> try valDef
         <|> try assignment 
         <|> valDec 
 
