@@ -18,9 +18,6 @@ appendToOutput str asm =
 asmPut :: String -> State Asm ()
 asmPut str = modify $ appendToOutput (str ++ "\n")
 
--- asmComment :: String -> State Asm ()
--- asmComment str = modify $ ()
-
 getVarStackOffset :: String -> State Asm Int
 getVarStackOffset varName = do
     vars <- gets variable 

@@ -7,6 +7,7 @@ import Data.List (init, dropWhileEnd)
 import Ast
 import Assembly
 import CParser
+import Semantic
 import Text.Show.Pretty
 import Control.Monad
 
@@ -16,17 +17,20 @@ main = do
     let parseResult = runCparser input
     let justParse = elem "-t" args 
     let rawFileName = init $ dropWhileEnd ( /= '.') (head args)
-    return ()
+
     case parseResult of
         Left error -> do
             putStrLn $ ppShow error
         Right tree -> 
                 if justParse then 
                     dumpParseTree tree
-                else do
-                    writeFile (rawFileName ++ ".s") (runAssembly tree)
-                    runAs rawFileName
-                    runLinker rawFileName
+                else
+                    case validate tree of
+                        Just err -> putStrLn err
+                        Nothing -> do
+                            writeFile (rawFileName ++ ".s") (runAssembly tree)
+                            runAs rawFileName
+                            runLinker rawFileName
 
 dumpParseTree :: ParseTree -> IO ()
 dumpParseTree tree = putStr $ ppShow tree
