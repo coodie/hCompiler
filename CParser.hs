@@ -6,30 +6,42 @@ import Data.List
 import Control.Applicative hiding (many, (<|>))
 import Debug.Trace (trace)
 
-expr :: Parser Expr
-expr = term1 `chainl1` (plus <|> minus)
+funCall :: (Name -> [ArithExpr] -> a) -> Parser a
+funCall fun = do
+        funName <- identifier
+        params <- brackets1 (sepBy arithExpr coma)
+        return $ fun funName params
+
+-- ArithExpr
+arithExpr :: Parser ArithExpr
+arithExpr = (try term1) `chainl1` try (junk >> (plus <|> minus))
     where
-    term1 = term2 `chainl1` mul
-    term2 = factor `chainl1` boolOp
-    factor =    try strConst <|> 
-                try intConst <|> 
-                try funCall <|> 
-                try varName <|> 
-                brackets1 expr
-    mul = junk >> char '*' >> return Mul
-    plus = junk >> char '+' >> return Add
-    minus = junk >> char '-' >> return Sub
-    boolOp =        (try equalOperator >> return Equal) 
-              <|>   (try notEqualOperator >> return NotEqual)
-              <|>   (greaterOperator >> return Greater)
+    term1 = (junk >> factor) `chainl1` try (junk >> mul)
+    factor :: Parser ArithExpr
+    factor =    try (brackets1 arithExpr)
+                <|> try intConst 
+                <|> (try $ funCall ArithFunCall)
+                <|> varName
+    mul = char '*' >> return Mul
+    plus = char '+' >> return Add
+    minus = char '-' >> return Sub
+    intConst = IntConst . read <$> many1 digit
+    varName = VarName <$> word
 
-varName :: Parser Expr
-varName = VarName <$> identifier
+-- BoolExpr
+boolExpr :: Parser BoolExpr
+boolExpr = do
+    e1 <- arithExpr
+    op <- junk >> operator
+    e2 <- arithExpr
+    return $ op e1 e2
+    where
+    operator = 
+            (equalOperator >> (return Equal))
+        <|> (notEqualOperator >> (return NotEqual))
+        <|> (greaterOperator >> (return Greater))
 
-funCall :: Parser Expr
-funCall = 
-    FunCall <$> identifier <*> brackets1 (sepBy (try expr) coma)
-
+-- Statement
 valDec :: Parser Statement
 valDec = do
     tp <- identifier
@@ -37,23 +49,22 @@ valDec = do
     semicolon
     return $ ValDec tp nm
 
+assignment :: Parser Statement
+assignment = do
+    varname <- identifier
+    assign
+    rest <- arithExpr
+    semicolon
+    return $ Assignment varname rest
+
 valDef :: Parser Statement
 valDef = do
     tp <- identifier
     nm <- identifier
     assign
-    rest <- expr
+    rest <- arithExpr
     semicolon
     return $ ValDef tp nm rest
-
-
-assignment :: Parser Statement
-assignment = do
-    varname <- identifier
-    assign
-    rest <- expr
-    semicolon
-    return $ Assignment varname rest
 
 bodyStatement = try manyStatements <|> oneStatement
     where
@@ -63,35 +74,32 @@ bodyStatement = try manyStatements <|> oneStatement
 conditional :: Parser Statement
 conditional = do
     junk >> string "if"
-    ifExpr <- brackets1 expr
+    ifExpr <- brackets1 boolExpr
     ifStatements <- bodyStatement
     elseStatements <- junk >> option [] elseParser
-    if null elseStatements then
-            return $ ConditionalIf ifExpr ifStatements
-        else
-            return $ ConditionalIfElse ifExpr ifStatements elseStatements
+    return $ ConditionalIfElse ifExpr ifStatements elseStatements
     where
     elseParser = do
         string "else"
         bodyStatement
 
+statFunCall :: Parser Statement
+statFunCall = do
+    x <- funCall StatFunCall
+    semicolon
+    return x
+
 whileLoop :: Parser Statement
 whileLoop = do
     junk >> string "while"
-    whileExpr <- brackets1 expr
+    whileArithExpr <- brackets1 boolExpr
     statements <- bodyStatement
-    return $ WhileLoop whileExpr statements
-
-statExpr :: Parser Statement
-statExpr = do 
-    res <- expr
-    semicolon
-    return $ StatExpr res
+    return $ WhileLoop whileArithExpr statements
 
 functionReturn :: Parser Statement
 functionReturn = do
     junk >> string "return"
-    res <- expr
+    res <- arithExpr
     semicolon
     return $ FunctionReturn res
 
@@ -99,9 +107,9 @@ statement :: Parser Statement
 statement = try conditional 
         <|> try whileLoop 
         <|> try functionReturn 
-        <|> try statExpr
         <|> try valDef
         <|> try assignment 
+        <|> try statFunCall
         <|> valDec 
 
 params :: Parser [Parameter]

@@ -1,7 +1,7 @@
 module Ast where
 
 
-type ParseTree = [Function] 
+type ParseTree = [Function]
 
 data FunctionDecl =
     FunctionDecl Type Name [Parameter]
@@ -12,36 +12,33 @@ data Function =
     deriving (Show)
 
 data Statement =
-    ValDec Type Name | 
-    Assignment Var Expr |
-    ValDef Type Name Expr |
-    ConditionalIf Expr [Statement] |
-    ConditionalIfElse Expr [Statement] [Statement] |
-    WhileLoop Expr [Statement] |
-    StatExpr Expr |
-    FunctionReturn Expr
+      ValDec Type Name
+    | Assignment Var ArithExpr
+    | ValDef Type Name ArithExpr
+    | ConditionalIfElse BoolExpr [Statement] [Statement]
+    | WhileLoop BoolExpr [Statement]
+    | StatFunCall Name [ArithExpr]
+    | FunctionReturn ArithExpr
     deriving (Show)
 
-data Expr = 
-    StrConst String | 
-    IntConst Integer |
-    BoolConst Bool |
-    VarName String |
-    Add Expr Expr |
-    Sub Expr Expr |
-    Div Expr Expr |
-    Mul Expr Expr |
-    Equal Expr Expr |
-    NotEqual Expr Expr | 
-    Greater Expr Expr |
-    FunCall Name [Expr]
+data BoolExpr = 
+      Equal ArithExpr ArithExpr
+    | NotEqual ArithExpr ArithExpr 
+    | Greater ArithExpr ArithExpr
+    deriving (Show)
+
+data ArithExpr = 
+      IntConst Integer
+    | VarName String
+    | ArithFunCall Name [ArithExpr]
+    | Add ArithExpr ArithExpr
+    | Sub ArithExpr ArithExpr
+    | Mul ArithExpr ArithExpr
     deriving (Show)
 
 data Parameter =
     Parameter Type Name
     deriving (Show)
-
-
 
 type Type = String
 type Name = String
