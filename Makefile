@@ -1,7 +1,7 @@
 all: main
 
 main:
-	ghc  Main.hs --make -o Main -outputdir build
+	ghc  src/Main.hs -isrc --make -o hCompiler -outputdir build
 
 clean:
-	rm *.o *.hi
+	rm -R build

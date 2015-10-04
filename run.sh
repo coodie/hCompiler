@@ -9,7 +9,7 @@ then
     rm ./$filename ./$filenameobj
 fi
 
-./Main -S < $file | as --32 -o $filenameobj
+./hCompiler -S < $file | as --32 -o $filenameobj
 
 if [ -e $filenameobj ] 
 then
