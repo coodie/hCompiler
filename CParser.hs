@@ -32,14 +32,17 @@ arithExpr = (try term1) `chainl1` try (junk >> (plus <|> minus))
 boolExpr :: Parser BoolExpr
 boolExpr = do
     e1 <- arithExpr
-    op <- junk >> operator
+    op <- operator
     e2 <- arithExpr
     return $ op e1 e2
     where
     operator = 
-            (equalOperator >> (return Equal))
-        <|> (notEqualOperator >> (return NotEqual))
-        <|> (greaterOperator >> (return Greater))
+            try (equalOperator >> (return Equal))
+        <|> try (greaterEqualOperator >> (return GreaterEqual))
+        <|> try (lessEqualOperator >> (return LessEqual))
+        <|> try (notEqualOperator >> (return NotEqual))
+        <|> try (greaterOperator >> (return Greater))
+        <|> (lessOperator >> (return Less))
 
 -- Statement
 valDec :: Parser Statement

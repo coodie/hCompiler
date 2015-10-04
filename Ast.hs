@@ -25,6 +25,9 @@ data BoolExpr =
       Equal ArithExpr ArithExpr
     | NotEqual ArithExpr ArithExpr 
     | Greater ArithExpr ArithExpr
+    | GreaterEqual ArithExpr ArithExpr
+    | Less ArithExpr ArithExpr
+    | LessEqual ArithExpr ArithExpr
     deriving (Show)
 
 data ArithExpr = 

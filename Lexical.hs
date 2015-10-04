@@ -44,5 +44,14 @@ equalOperator = junk >> string "=="
 notEqualOperator :: Parser String
 notEqualOperator = junk >> string "!="
 
-greaterOperator :: Parser Char
-greaterOperator = junk >> char '<'
+greaterOperator :: Parser String
+greaterOperator = junk >> string "<"
+
+greaterEqualOperator :: Parser String
+greaterEqualOperator = junk >> string "<="
+
+lessOperator :: Parser String
+lessOperator = junk >> string ">"
+
+lessEqualOperator :: Parser String
+lessEqualOperator = junk >> string ">="

@@ -132,13 +132,30 @@ boolExpr expr = do
     arithExpr e2
     asmPut "cmp %ebx, %eax"
     case expr of
-        (Equal _ _) -> return "je "
-        (NotEqual _ _) -> return "jne "
-        (Greater _ _) -> return "jg "
+        (Equal _ _) -> return "je"
+        (NotEqual _ _) -> return "jne"
+        (Greater _ _) -> return "jg"
+        (GreaterEqual _ _) -> return "jge"
+        (Less _ _) -> return "jl"
+        (LessEqual _ _) -> return "jle"
     where
     getBoth (Equal e1 e2) = (e1, e2) 
     getBoth (NotEqual e1 e2) = (e1, e2) 
     getBoth (Greater e1 e2) = (e1, e2) 
+    getBoth (GreaterEqual e1 e2) = (e1, e2) 
+    getBoth (Less e1 e2) = (e1, e2) 
+    getBoth (LessEqual e1 e2) = (e1, e2) 
+
+reverseJumpInstr :: String -> String
+reverseJumpInstr instr = 
+    case instr of
+        "je" -> "jne"
+        "jne" -> "je"
+        "jg" -> "jle"
+        "jge" -> "jl"
+        "jl" -> "jge"
+        "jle" -> "jg"
+        _ -> "not supported " ++ instr
 
 statement :: Statement -> State Asm ()
 statement (ValDec typeName varName) = 
@@ -169,9 +186,10 @@ statement (WhileLoop expr whileBody) = do
     labelNumber <- liftM show newLabelNumber
     let enterLabel = "while" ++ labelNumber ++ "enter"
     let exitLabel = "while" ++ labelNumber ++ "exit"
+
     asmPut $ enterLabel ++ ":"
-    jumpInstr <- boolExpr expr
-    asmPut $ jumpInstr ++ exitLabel
+    jumpInstr <- boolExpr expr >>= return . reverseJumpInstr --if(expr == true) goto enterLabel
+    asmPut $ jumpInstr ++ " " ++ exitLabel
     mapM_ statement whileBody
     asmPut $ "jmp " ++ enterLabel
     asmPut $ exitLabel ++ ":"
@@ -183,7 +201,7 @@ statement (ConditionalIfElse ifExpr ifBody elseBody) = do
     let exitLabel = "ifElseExit" ++ labelNumber
 
     jumpInstr <- boolExpr ifExpr
-    asmPut $ jumpInstr ++ ifLabel
+    asmPut $ jumpInstr ++ " " ++ ifLabel
     mapM_ statement elseBody
     asmPut $ "jmp " ++ exitLabel
 
