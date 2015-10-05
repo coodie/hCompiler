@@ -44,7 +44,7 @@ runAs filename = do
     (asExit, asStdOut, asStdErr) <- readProcessWithExitCode "as" asArgs ""
     case asExit of 
         ExitSuccess -> return ()
-        ExitFailure _ -> putStr asStdOut
+        ExitFailure _ -> putStr asStdErr
 
 runLinker :: String -> IO ()
 runLinker filename = do
@@ -52,6 +52,6 @@ runLinker filename = do
     (linkerExit, linkerStdOut, linkerStdErr) <- readProcessWithExitCode "gcc" linkerArgs ""
     case linkerExit of 
         ExitSuccess -> return ()
-        ExitFailure _ -> putStr linkerStdOut
+        ExitFailure _ -> putStr linkerStdErr
     
 
