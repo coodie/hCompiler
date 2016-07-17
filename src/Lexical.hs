@@ -4,54 +4,90 @@ import Text.ParserCombinators.Parsec
 import Data.List
 import Control.Applicative hiding (many, (<|>))
 import Data.Char
+import qualified Text.Parsec.Token as Token
 
-junk :: Parser ()
-junk = spaces <?> "junk"
+cLanguageDef :: Token.LanguageDef ()
+cLanguageDef = Token.LanguageDef
+        {
+            Token.commentStart = "/*",
+            Token.commentEnd = "*/",
+            Token.commentLine = "//",
+            Token.nestedComments = True,
+            Token.identStart = letter <|> char '_',
+            Token.identLetter = alphaNum <|> char '_',
+            Token.opStart = oneOf "<+*-=!>;",
+            Token.opLetter = oneOf "<+*-=!>",
+            Token.reservedNames = [   
+                                      "return",
+                                      "if",
+                                      "else",
+                                      "while",
+                                      "for"
+                                  ],
+            Token.reservedOpNames = [ "+",
+                                      "-",
+                                      "*",
+                                      "=",
+                                      "==",
+                                      "<=",
+                                      "<",
+                                      "!=",
+                                      ">=",
+                                      ";"
+                                    ],
+            Token.caseSensitive = True
+        }
 
-word :: Parser String
-word = many1 $ satisfy (\x -> isAlpha x || x == '_')
+lexer = Token.makeTokenParser cLanguageDef
 
 identifier :: Parser String
-identifier = junk >> word 
+identifier = Token.identifier lexer
 
-brackets1 :: Parser a -> Parser a
-brackets1 p = do
-    junk >> char '('
-    res <- p
-    junk >> char ')'
-    return res
+integer :: Parser Integer
+integer = Token.integer lexer
 
-brackets2 :: Parser a -> Parser a
-brackets2 p = do
-    junk >> char '{'
-    res <- p
-    junk >> char '}'
-    return res
+reserved :: String -> Parser ()
+reserved = Token.reserved lexer
 
-assign :: Parser Char
-assign = junk >> char '='
+parens :: Parser a -> Parser a
+parens = Token.parens lexer
 
-semicolon :: Parser ()
-semicolon = junk >> char ';' >> return ()
+braces :: Parser a -> Parser a
+braces = Token.braces lexer
 
-coma :: Parser ()
-coma = junk >> char ',' >> return ()
+assign :: Parser ()
+assign = Token.reservedOp lexer $ "="
 
+semicolon :: Parser String
+semicolon = Token.semi lexer
 
-equalOperator :: Parser String
-equalOperator = junk >> string "=="
+coma :: Parser String
+coma = Token.comma lexer
 
-notEqualOperator :: Parser String
-notEqualOperator = junk >> string "!="
+equalToken :: Parser ()
+equalToken = Token.reservedOp lexer $ "=="
 
-greaterOperator :: Parser String
-greaterOperator = junk >> string "<"
+notEqualToken :: Parser ()
+notEqualToken = Token.reservedOp lexer $ "!="
 
-greaterEqualOperator :: Parser String
-greaterEqualOperator = junk >> string "<="
+greaterToken :: Parser ()
+greaterToken = Token.reservedOp lexer $ "<"
 
-lessOperator :: Parser String
-lessOperator = junk >> string ">"
+greaterEqualToken :: Parser ()
+greaterEqualToken = Token.reservedOp lexer $ "<="
 
-lessEqualOperator :: Parser String
-lessEqualOperator = junk >> string ">="
+lessToken :: Parser ()
+lessToken = Token.reservedOp lexer $ ">"
+
+lessEqualToken :: Parser ()
+lessEqualToken = Token.reservedOp lexer $ ">="
+
+mulToken :: Parser()
+mulToken = Token.reservedOp lexer $ "*"
+
+plusToken :: Parser()
+plusToken = Token.reservedOp lexer $ "+"
+
+subToken :: Parser()
+subToken = Token.reservedOp lexer $ "-"
+

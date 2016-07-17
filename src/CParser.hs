@@ -6,27 +6,28 @@ import Data.List
 import Control.Applicative hiding (many, (<|>))
 import Debug.Trace (trace)
 
+
 funCall :: (Name -> [ArithExpr] -> a) -> Parser a
 funCall fun = do
         funName <- identifier
-        params <- brackets1 (sepBy arithExpr coma)
+        params <- parens (sepBy arithExpr coma)
         return $ fun funName params
 
 -- ArithExpr
 arithExpr :: Parser ArithExpr
-arithExpr = (try term1) `chainl1` try (junk >> (plus <|> minus))
+arithExpr = (try term1) `chainl1` try (plus <|> minus)
     where
-    term1 = (junk >> factor) `chainl1` try (junk >> mul)
+    term1 = factor `chainl1` try mul
     factor :: Parser ArithExpr
-    factor =    try (brackets1 arithExpr)
+    factor =    try (parens arithExpr)
                 <|> try intConst 
                 <|> (try $ funCall ArithFunCall)
                 <|> varName
-    mul = char '*' >> return Mul
-    plus = char '+' >> return Add
-    minus = char '-' >> return Sub
-    intConst = IntConst . read <$> many1 digit
-    varName = VarName <$> word
+    mul = mulToken >> return Mul
+    plus = plusToken >> return Add
+    minus = subToken >> return Sub
+    intConst = IntConst <$> integer
+    varName = VarName <$> identifier
 
 -- BoolExpr
 boolExpr :: Parser BoolExpr
@@ -37,12 +38,12 @@ boolExpr = do
     return $ op e1 e2
     where
     operator = 
-            try (equalOperator >> (return Equal))
-        <|> try (greaterEqualOperator >> (return GreaterEqual))
-        <|> try (lessEqualOperator >> (return LessEqual))
-        <|> try (notEqualOperator >> (return NotEqual))
-        <|> try (greaterOperator >> (return Greater))
-        <|> (lessOperator >> (return Less))
+            try (equalToken >> (return Equal))
+        <|> try (greaterEqualToken >> (return GreaterEqual))
+        <|> try (lessEqualToken >> (return LessEqual))
+        <|> try (notEqualToken >> (return NotEqual))
+        <|> try (greaterToken >> (return Greater))
+        <|> (lessToken >> (return Less))
 
 -- Statement
 valDec :: Parser Statement
@@ -71,19 +72,19 @@ valDef = do
 
 bodyStatement = try manyStatements <|> oneStatement
     where
-    manyStatements = brackets2 $ many (try statement)
+    manyStatements = braces $ many (try statement)
     oneStatement = (: []) <$> statement
 
 conditional :: Parser Statement
 conditional = do
-    junk >> string "if"
-    ifExpr <- brackets1 boolExpr
+    reserved "if"
+    ifExpr <- parens boolExpr
     ifStatements <- bodyStatement
-    elseStatements <- junk >> option [] elseParser
+    elseStatements <- option [] elseParser
     return $ ConditionalIfElse ifExpr ifStatements elseStatements
     where
     elseParser = do
-        string "else"
+        reserved "else"
         bodyStatement
 
 statFunCall :: Parser Statement
@@ -94,14 +95,14 @@ statFunCall = do
 
 whileLoop :: Parser Statement
 whileLoop = do
-    junk >> string "while"
-    whileArithExpr <- brackets1 boolExpr
+    reserved "while"
+    whileArithExpr <- parens boolExpr
     statements <- bodyStatement
     return $ WhileLoop whileArithExpr statements
 
 functionReturn :: Parser Statement
 functionReturn = do
-    junk >> string "return"
+    reserved "return"
     res <- arithExpr
     semicolon
     return $ FunctionReturn res
@@ -118,13 +119,13 @@ statement = try conditional
 params :: Parser [Parameter]
 params = sepBy (Parameter <$> identifier <*> identifier) coma
 
-functionDecl = FunctionDecl <$> identifier <*> identifier <*> brackets1 params
-function = Function <$> functionDecl <*> brackets2 (many (try statement))
+functionDecl = FunctionDecl <$> identifier <*> identifier <*> parens params
+function = Function <$> functionDecl <*> braces (many (try statement))
 
 cParser :: Parser ParseTree
 cParser = do 
     x <- (many1 $ try function)
-    junk >> eof
+    eof
     return x
     
 runCparser = parse cParser "C parser"
