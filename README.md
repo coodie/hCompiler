@@ -10,9 +10,33 @@ What is supported:
 - 4-byte ints
 - If and while.
 
-Installing this might bring some problems. You have to install proper Haskell libraries (like Parsec). Keep in mind you also need 32-bit standard C library to actually use this compiler! 
+# Installation
+
+Make sure you have cabal supporting sandboxes (this worked with cabal 1.24.0.0).
+
+You need to prepare proper haskell packages first
+```bash
+cabal sandbox init
+cabal install -j
+```
+
+When you have needed haskell packages it's time to compile project. The easiest way is to start cabal with new shell and run make:
+
+```bash
+cabal exec bash
+make
+```
+
+You will also need 32-bit C library. On debian distros something like this should work:
+
+```bash
+sudo apt-get install gcc-multilib
+```
+
+# Other
 
 This project is very small and has many bugs and lacks ton of features. But you can't expect much from inexperienced student which spent around 4-5 days to get this working.
+
 
 Overall structure of project:
 - Parsing is done using Parsec
